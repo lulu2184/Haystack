@@ -30,64 +30,71 @@ public class CacheHandler implements HttpHandler {
         if (exchange.getRequestMethod().equalToString("GET")) {
             String path = exchange.getRelativePath().substring(1);
             String[] paths = path.split("/");
-            String key = paths[2];
-            String lvid = paths[1];
-            String physicalURL = paths[0];
-//            String cacheURL = paths[0];
-            System.out.println("pid: " + key);
-
-            // TODO: about to change key
-            if (jedis.exists(key + "key")) {
-                // return photo from cache
-                byte[] photo = jedis.get((key + "key").getBytes());
-                if (debug) {
-                    writePhoto(filepath_root + "test" + key, photo);
-                }
-                exchange.getOutputStream().write(photo);
-                exchange.endExchange();
+            if (paths.length != 3) {
+                badRequest(exchange);
             } else {
-                // connect store
-                HttpURLConnection con = null;
-                try {
-                    URL url = new URL(String.format("http://%s/%s/%s",
-                            physicalURL, lvid, key));
-                    con = (HttpURLConnection) url.openConnection();
-                } catch (IOException e) {
-                    System.err.println("Failed to connect to " + physicalURL);
-                }
+                String key = paths[2];
+                String lvid = paths[1];
+                String physicalURL = paths[0];
+//            String cacheURL = paths[0];
+                System.out.println("pid: " + key);
 
-                try {
-                    con.setRequestMethod("GET");
-                    con.setRequestProperty("Content-Type", "application/json");
-                } catch (ProtocolException e) {
-                    e.printStackTrace();
-                }
-
-                try {
-                    int code = con.getResponseCode();
-                    if (code == 200) {
-                        // store into cache
-                        byte[] photo = IOUtils.toByteArray(con.getInputStream());
-                        storePhotoIntoCache(key, photo);
-                        if (debug) {
-                            writePhoto(filepath_root + "test" + key, photo);
-                        }
-                        exchange.getOutputStream().write(photo);
-                        exchange.endExchange();
-                    } else if (code == 404) {
-                        notFound(exchange);
+                // TODO: about to change key
+                if (jedis.exists(key + "key")) {
+                    // return photo from cache
+                    byte[] photo = jedis.get((key + "key").getBytes());
+                    if (debug) {
+                        writePhoto(filepath_root + "test" + key, photo);
                     }
-                } catch (IOException e) {
-                    e.printStackTrace();
+                    exchange.getOutputStream().write(photo);
+                    exchange.endExchange();
+                } else {
+                    // connect store
+                    HttpURLConnection con = null;
+                    try {
+                        URL url = new URL(String.format("http://%s/%s/%s",
+                                physicalURL, lvid, key));
+                        con = (HttpURLConnection) url.openConnection();
+                    } catch (IOException e) {
+                        System.err.println("Failed to connect to " + physicalURL);
+                    }
+
+                    try {
+                        con.setRequestMethod("GET");
+                        con.setRequestProperty("Content-Type", "application/json");
+                    } catch (ProtocolException e) {
+                        e.printStackTrace();
+                    }
+
+                    try {
+                        int code = con.getResponseCode();
+                        if (code == 200) {
+                            // store into cache
+                            byte[] photo = IOUtils.toByteArray(con.getInputStream());
+                            storePhotoIntoCache(key, photo);
+                            if (debug) {
+                                writePhoto(filepath_root + "test" + key, photo);
+                            }
+                            exchange.getOutputStream().write(photo);
+                            exchange.endExchange();
+                        } else if (code == 404) {
+                            notFound(exchange);
+                        }
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
                 }
-
             }
-
         }
     }
 
     private void notFound(HttpServerExchange exchange) {
         exchange.setStatusCode(StatusCodes.NOT_FOUND);
+        exchange.endExchange();
+    }
+
+    private void badRequest(HttpServerExchange exchange) {
+        exchange.setStatusCode(StatusCodes.BAD_REQUEST);
         exchange.endExchange();
     }
 

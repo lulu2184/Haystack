@@ -33,45 +33,62 @@ public class StoreHandler implements HttpHandler {
 
         // Upload img
         if (exchange.getRequestMethod().equalToString("POST")) {
-            byte[] photo = IOUtils.toByteArray(exchange.getInputStream());
+            if (paths.length != 2) {
+                badRequest(exchange);
+            } else {
+                byte[] photo = IOUtils.toByteArray(exchange.getInputStream());
 
-            String lvid = paths[0];
-            String filepath =  filepath_root + lvid;
-            long key = Long.parseLong(paths[1]);
-            boolean success = upload(filepath, key, photo);
-            if (success)
-                exchange.getResponseSender().send("ok");
-            else {
-                System.out.println("No storage!");
-                noStorage(exchange);
+                String lvid = paths[0];
+                String filepath =  filepath_root + lvid;
+                long key = Long.parseLong(paths[1]);
+                boolean success = upload(filepath, key, photo);
+                if (success)
+                    exchange.getResponseSender().send("ok");
+                else {
+                    System.out.println("No storage!");
+                    noStorage(exchange);
+                }
             }
         } else if (exchange.getRequestMethod().equalToString("GET")) {
-            String lvid = paths[0];
-            String filepath = filepath_root + lvid;
-            long key = Long.parseLong(paths[1]);
-            byte[] photo = readPhoto(filepath, key);
-            if(photo.length == 0) {
-                System.out.println("Photo does not exist!");
-                notFound(exchange);
+            if (paths.length != 2) {
+                badRequest(exchange);
             } else {
-                exchange.getOutputStream().write(photo);
-                exchange.endExchange();
+                String lvid = paths[0];
+                String filepath = filepath_root + lvid;
+                long key = Long.parseLong(paths[1]);
+                byte[] photo = readPhoto(filepath, key);
+                if(photo.length == 0) {
+                    System.out.println("Photo does not exist!");
+                    notFound(exchange);
+                } else {
+                    exchange.getOutputStream().write(photo);
+                    exchange.endExchange();
+                }
             }
 
         } else if (exchange.getRequestMethod().equalToString("DELETE")) {
-            long key = Long.parseLong(paths[1]);
-            boolean success = delete(key);
-            if (success)
-                exchange.getResponseSender().send("ok");
-            else {
-                System.out.println("Photo not found!");
-                notFound(exchange);
+            if (paths.length != 2) {
+                badRequest(exchange);
+            } else {
+                long key = Long.parseLong(paths[1]);
+                boolean success = delete(key);
+                if (success)
+                    exchange.getResponseSender().send("ok");
+                else {
+                    System.out.println("Photo not found!");
+                    notFound(exchange);
+                }
             }
         }
     }
 
     private void notFound(HttpServerExchange exchange) {
         exchange.setStatusCode(StatusCodes.NOT_FOUND);
+        exchange.endExchange();
+    }
+
+    private void badRequest(HttpServerExchange exchange) {
+        exchange.setStatusCode(StatusCodes.BAD_REQUEST);
         exchange.endExchange();
     }
 

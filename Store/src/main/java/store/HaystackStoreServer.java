@@ -32,24 +32,24 @@ public class HaystackStoreServer {
             e.printStackTrace();
         }
 
-        PoolingHttpClientConnectionManager manager = new PoolingHttpClientConnectionManager();
-        manager.setMaxTotal(40);
-        manager.setDefaultMaxPerRoute(20);
-        HttpClientBuilder clientBuilder = HttpClients.custom().setConnectionManager(manager).setConnectionManagerShared(true);
-
-        // TODO: Replace dir_ip&port
-        try (CloseableHttpClient client = clientBuilder.build()) {
-            String dir_ip = "127.0.0.1";
-            String port = "4444";
-            int volumn_num = 10;
-            HttpPost post = new HttpPost("http://" + dir_ip + ":" + port + "/" + volumn_num);
-            client.execute(post);
-//            CloseableHttpResponse response = client.execute(post);
-//            int code = response.getStatusLine().getStatusCode();
-//            System.out.println(response);
-//            response.close();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+//        PoolingHttpClientConnectionManager manager = new PoolingHttpClientConnectionManager();
+//        manager.setMaxTotal(40);
+//        manager.setDefaultMaxPerRoute(20);
+//        HttpClientBuilder clientBuilder = HttpClients.custom().setConnectionManager(manager).setConnectionManagerShared(true);
+//
+//        // TODO: Replace dir_ip&port
+//        try (CloseableHttpClient client = clientBuilder.build()) {
+//            String dir_ip = "127.0.0.1";
+//            String port = "4444";
+//            int volumn_num = 10;
+//            HttpPost post = new HttpPost("http://" + dir_ip + ":" + port + "/" + volumn_num);
+//            client.execute(post);
+////            CloseableHttpResponse response = client.execute(post);
+////            int code = response.getStatusLine().getStatusCode();
+////            System.out.println(response);
+////            response.close();
+//        } catch (IOException e) {
+//            e.printStackTrace();
+//        }
     }
 }

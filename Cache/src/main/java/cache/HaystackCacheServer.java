@@ -24,23 +24,23 @@ public class HaystackCacheServer {
                 .build();
         server.start();
 
-        PoolingHttpClientConnectionManager manager = new PoolingHttpClientConnectionManager();
-        manager.setMaxTotal(40);
-        manager.setDefaultMaxPerRoute(20);
-        HttpClientBuilder clientBuilder = HttpClients.custom().setConnectionManager(manager).setConnectionManagerShared(true);
-
-        // TODO: Replace dir_ip&port
-        try (CloseableHttpClient client = clientBuilder.build()) {
-            String dir_ip = "127.0.0.1";
-            String port = "4444";
-            HttpPost post = new HttpPost("http://" + dir_ip + ":" + port + "/");
-            client.execute(post);
-//            CloseableHttpResponse response = client.execute(post);
-//            int code = response.getStatusLine().getStatusCode();
-//            System.out.println(response);
-//            response.close();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+//        PoolingHttpClientConnectionManager manager = new PoolingHttpClientConnectionManager();
+//        manager.setMaxTotal(40);
+//        manager.setDefaultMaxPerRoute(20);
+//        HttpClientBuilder clientBuilder = HttpClients.custom().setConnectionManager(manager).setConnectionManagerShared(true);
+//
+//        // TODO: Replace dir_ip&port
+//        try (CloseableHttpClient client = clientBuilder.build()) {
+//            String dir_ip = "127.0.0.1";
+//            String port = "4444";
+//            HttpPost post = new HttpPost("http://" + dir_ip + ":" + port + "/");
+//            client.execute(post);
+////            CloseableHttpResponse response = client.execute(post);
+////            int code = response.getStatusLine().getStatusCode();
+////            System.out.println(response);
+////            response.close();
+//        } catch (IOException e) {
+//            e.printStackTrace();
+//        }
     }
 }
