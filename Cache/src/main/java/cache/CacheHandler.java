@@ -2,6 +2,7 @@ package cache;
 
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
+import io.undertow.util.StatusCodes;
 import org.apache.commons.io.IOUtils;
 import redis.clients.jedis.Jedis;
 
@@ -64,15 +65,17 @@ public class CacheHandler implements HttpHandler {
 
                 try {
                     int code = con.getResponseCode();
-                    byte[] photo = IOUtils.toByteArray(con.getInputStream());
                     if (code == 200) {
                         // store into cache
+                        byte[] photo = IOUtils.toByteArray(con.getInputStream());
                         storePhotoIntoCache(key, photo);
                         if (debug) {
                             writePhoto(filepath_root + "test" + key, photo);
                         }
                         exchange.getOutputStream().write(photo);
                         exchange.endExchange();
+                    } else if (code == 404) {
+                        notFound(exchange);
                     }
                 } catch (IOException e) {
                     e.printStackTrace();
@@ -81,6 +84,11 @@ public class CacheHandler implements HttpHandler {
             }
 
         }
+    }
+
+    private void notFound(HttpServerExchange exchange) {
+        exchange.setStatusCode(StatusCodes.NOT_FOUND);
+        exchange.endExchange();
     }
 
     private void storePhotoIntoCache(String key, byte[] photo) {
