@@ -46,9 +46,9 @@ public class StoreHandler implements HttpHandler {
                 noStorage(exchange);
             }
         } else if (exchange.getRequestMethod().equalToString("GET")) {
-            String lvid = paths[1];
+            String lvid = paths[0];
             String filepath = filepath_root + lvid;
-            long key = Long.parseLong(paths[2]);
+            long key = Long.parseLong(paths[1]);
             byte[] photo = readPhoto(filepath, key);
             if(photo.length == 0) {
                 System.out.println("Photo does not exist!");
@@ -58,6 +58,15 @@ public class StoreHandler implements HttpHandler {
                 exchange.endExchange();
             }
 
+        } else if (exchange.getRequestMethod().equalToString("DELETE")) {
+            long key = Long.parseLong(paths[1]);
+            boolean success = delete(key);
+            if (success)
+                exchange.getResponseSender().send("ok");
+            else {
+                System.out.println("Photo not found!");
+                notFound(exchange);
+            }
         }
     }
 
@@ -67,7 +76,7 @@ public class StoreHandler implements HttpHandler {
     }
 
     private void noStorage(HttpServerExchange exchange) {
-        exchange.setStatusCode(StatusCodes.INTERNAL_SERVER_ERROR);
+        exchange.setStatusCode(StatusCodes.SERVICE_UNAVAILABLE);
         exchange.endExchange();
     }
 
@@ -116,8 +125,9 @@ public class StoreHandler implements HttpHandler {
             //8 bytes
             raf.writeLong(checksum);
 
-            int mod = 8 - current_len % 8;
-            raf.write(mod);
+//            int mod = 8 - current_len % 8;
+//            raf.write(mod);
+            int mod = 0;
             raf.close();
 
             // save offset into redis
@@ -184,6 +194,14 @@ public class StoreHandler implements HttpHandler {
         }
 
         return photo;
+    }
 
+    private boolean delete(long key) {
+        String key_str = ((Long)key).toString();
+        if (jedis.exists(key_str)) {
+            jedis.del(key_str);
+            return true;
+        } else
+            return false;
     }
 }

@@ -29,11 +29,10 @@ public class CacheHandler implements HttpHandler {
         if (exchange.getRequestMethod().equalToString("GET")) {
             String path = exchange.getRelativePath().substring(1);
             String[] paths = path.split("/");
-
-            String key = paths[3];
-            String lvid = paths[2];
-            String physicalURL = paths[1];
-            String cacheURL = paths[0];
+            String key = paths[2];
+            String lvid = paths[1];
+            String physicalURL = paths[0];
+//            String cacheURL = paths[0];
             System.out.println("pid: " + key);
 
             // TODO: about to change key
@@ -49,8 +48,8 @@ public class CacheHandler implements HttpHandler {
                 // connect store
                 HttpURLConnection con = null;
                 try {
-                    URL url = new URL(String.format("http://%s/%s/%s/%s",
-                            physicalURL, cacheURL, lvid, key));
+                    URL url = new URL(String.format("http://%s/%s/%s",
+                            physicalURL, lvid, key));
                     con = (HttpURLConnection) url.openConnection();
                 } catch (IOException e) {
                     System.err.println("Failed to connect to " + physicalURL);
