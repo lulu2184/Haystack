@@ -14,7 +14,7 @@ import java.net.URL;
 
 public class CacheHandler implements HttpHandler {
     Jedis jedis = new Jedis();
-    boolean debug = true;
+    boolean debug = false;
     @Override
     public void handleRequest(HttpServerExchange exchange) throws Exception {
         exchange.startBlocking();

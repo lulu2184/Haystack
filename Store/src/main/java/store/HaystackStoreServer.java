@@ -17,7 +17,7 @@ public class HaystackStoreServer {
             Undertow server = Undertow.builder()
                     .setWorkerOption(Options.WORKER_IO_THREADS, 80)
                     .setWorkerOption(Options.WORKER_TASK_CORE_THREADS, 400)
-                    .addHttpListener(4443, "localhost")
+                    .addHttpListener(4443, "0.0.0.0")
                     .setHandler(new EagerFormParsingHandler().setNext(storeHandler))
                     .build();
             server.start();

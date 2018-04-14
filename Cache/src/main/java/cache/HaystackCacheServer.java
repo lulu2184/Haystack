@@ -11,7 +11,7 @@ public class HaystackCacheServer {
         Undertow server = Undertow.builder()
                 .setWorkerOption(Options.WORKER_IO_THREADS, 80)
                 .setWorkerOption(Options.WORKER_TASK_CORE_THREADS, 400)
-                .addHttpListener(4442, "localhost")
+                .addHttpListener(4442, "0.0.0.0")
                 .setHandler(cacheHandler)
                 .build();
         server.start();

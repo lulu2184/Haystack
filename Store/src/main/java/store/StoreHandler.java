@@ -27,8 +27,8 @@ public class StoreHandler implements HttpHandler {
 
         String path = exchange.getRelativePath().substring(1);
         String[] paths = path.split("/");
-        String filepath_root = "/Users/youx/Developer/photos/";
-//        String filepath_root = "/afs/andrew.cmu.edu/usr12/youx/photos/"
+//        String filepath_root = "/Users/youx/Developer/photos/";
+        String filepath_root = "/afs/andrew.cmu.edu/usr12/youx/photos/";
 
 
         // Upload img
