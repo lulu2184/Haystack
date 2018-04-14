@@ -5,13 +5,16 @@ import io.undertow.server.HttpServerExchange;
 import org.apache.commons.io.IOUtils;
 import redis.clients.jedis.Jedis;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.RandomAccessFile;
 import java.net.HttpURLConnection;
 import java.net.ProtocolException;
 import java.net.URL;
 
 public class CacheHandler implements HttpHandler {
     Jedis jedis = new Jedis();
+    boolean debug = true;
     @Override
     public void handleRequest(HttpServerExchange exchange) throws Exception {
         exchange.startBlocking();
@@ -20,6 +23,8 @@ public class CacheHandler implements HttpHandler {
             exchange.dispatch(this);
             return;
         }
+
+        String filepath_root = "/Users/youx/Developer/photos/";
 
         if (exchange.getRequestMethod().equalToString("GET")) {
             String path = exchange.getRelativePath().substring(1);
@@ -35,6 +40,9 @@ public class CacheHandler implements HttpHandler {
             if (jedis.exists(key + "key")) {
                 // return photo from cache
                 byte[] photo = jedis.get((key + "key").getBytes());
+                if (debug) {
+                    writePhoto(filepath_root + "test" + key, photo);
+                }
                 exchange.getOutputStream().write(photo);
                 exchange.endExchange();
             } else {
@@ -61,6 +69,9 @@ public class CacheHandler implements HttpHandler {
                     if (code == 200) {
                         // store into cache
                         storePhotoIntoCache(key, photo);
+                        if (debug) {
+                            writePhoto(filepath_root + "test" + key, photo);
+                        }
                         exchange.getOutputStream().write(photo);
                         exchange.endExchange();
                     }
@@ -77,5 +88,18 @@ public class CacheHandler implements HttpHandler {
         byte[] key_byte = (key + "key").getBytes();
         jedis.set(key_byte, photo);
         jedis.expire(key + "key", 60);
+    }
+
+    private void writePhoto(String path, byte[] photo) {
+        try {
+            RandomAccessFile output = new RandomAccessFile(path, "rw");
+            output.write(photo);
+            output.close();
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
     }
 }
