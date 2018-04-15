@@ -19,11 +19,11 @@ import java.util.Date;
 import java.util.List;
 import java.util.Random;
 
-public class UploadHandler implements HttpHandler {
+public class ImageHandler implements HttpHandler {
     private DirectoryConnector dirConnector;
 
-    public UploadHandler() {
-        dirConnector = new DirectoryConnector();
+    public ImageHandler(DirectoryConnector dirConnector) {
+        this.dirConnector = dirConnector;
     }
 
     public void handleRequest(final HttpServerExchange exchange) throws Exception {
@@ -51,43 +51,83 @@ public class UploadHandler implements HttpHandler {
             for (LogicalVolume logicalVolume : logicalVolumes) {
                 dirConnector.storePhotoRecord(pid, logicalVolume);
                 if (storePhotoInStorage(pid, data, logicalVolume)) {
-                    ResponseCodeHandler.HANDLE_200.handleRequest(exchange);
+                    exchange.setStatusCode(200);
+                    exchange.getResponseSender().send("pid: " + String.valueOf(pid));
                     success = true;
+                    break;
                 }
             }
             if (!success)
-                ResponseCodeHandler.HANDLE_500.handleRequest(exchange);
+                exchange.setStatusCode(500);
         }  else if (exchange.getRequestMethod().equals(Methods.GET)) {
             // GET request: get an image uploaded before.
+            String pid;
+            try {
+                pid = exchange.getQueryParameters().get("pid").getFirst();
+            } catch (NullPointerException e) {
+                exchange.setStatusCode(400);
+                exchange.getResponseSender().send("Invalid query parameter.");
+                return;
+            }
 
-            String pid = exchange.getQueryParameters().get("pid").getFirst();
-
-            PhotoIndexEntry photoEntry = dirConnector.getPhotoRecord(Integer.valueOf(pid));
+            PhotoIndexEntry photoEntry;
+            try {
+                photoEntry = dirConnector.getPhotoRecord(Long.valueOf(pid));
+            } catch (NumberFormatException e) {
+                exchange.setStatusCode(400);
+                exchange.getResponseSender().send("Invalid pid format.");
+                return;
+            }
             if (photoEntry != null) {
                 byte[] data = getPhotoData(photoEntry);
                 if (data == null) {
-                    ResponseCodeHandler.HANDLE_500.handleRequest(exchange);
+                    exchange.setStatusCode(500);
                 } else {
+                    exchange.setStatusCode(200);
                     exchange.getResponseSender().send(ByteBuffer.wrap(data));
-                    ResponseCodeHandler.HANDLE_200.handleRequest(exchange);
                 }
             } else {
                 // Image not found.
-                ResponseCodeHandler.HANDLE_404.handleRequest(exchange);
+                exchange.setStatusCode(404);
             }
+        } else if (exchange.getRequestMethod().equals(Methods.DELETE)) {
+            // DELETE request: delete an image with specific pid.
+
+            String pidString = exchange.getQueryParameters().get("pid").getFirst();
+            try {
+                long pid = Long.valueOf(pidString);
+                PhotoIndexEntry photoEntry = dirConnector.deletePhotoRecord(pid);
+                if (photoEntry == null) {
+                    exchange.setStatusCode(404);
+                    exchange.getResponseSender().send("Image not found.");
+                    return;
+                }
+                deletePhotoInStorage(pid, photoEntry.cacheUrl, photoEntry.logicalId);
+                for (String storeUrl : photoEntry.physicalMachines) {
+                    deletePhotoInStorage(pid, storeUrl, photoEntry.logicalId);
+                }
+                exchange.setStatusCode(200);
+            } catch (NumberFormatException e) {
+                exchange.setStatusCode(400);
+                exchange.getResponseSender().send("Invalid pid format.");
+            }
+
         }
     }
 
-    private static boolean storePhotoInStorage(long pid, byte[] data, LogicalVolume logicalVolume) {
+    private boolean storePhotoInStorage(long pid, byte[] data, LogicalVolume logicalVolume) {
         boolean success = false;
         for (String physicalUrl : logicalVolume.physicalVolumes) {
             HttpURLConnection con;
+            String urlString = "http://" + physicalUrl + "/" + String.valueOf(logicalVolume.logicalNum)
+                    + "/" + String.valueOf(pid);
+            System.out.println("POST URL to Store: " + urlString);
             try {
-                URL url = new URL(String.format("%s/%d/%d",
-                        physicalUrl, logicalVolume.logicalNum, pid));
+                URL url = new URL(urlString);
                 con = (HttpURLConnection) url.openConnection();
             } catch (IOException e) {
                 System.err.println("Failed to connect to " + physicalUrl);
+                e.printStackTrace();
                 continue;
             }
 
@@ -132,22 +172,29 @@ public class UploadHandler implements HttpHandler {
                 continue;
             }
 
-            JSONObject resJson = new JSONObject(response);
-            boolean isFull = resJson.getBoolean("isFull");
-            boolean isAvailable = resJson.getBoolean("isAvailable");
-            if (code == 200 && !isFull && isAvailable) {
+            System.out.println("[Response for POST]" + response);
+//            JSONObject resJson = new JSONObject(response);
+//            boolean isFull = resJson.getBoolean("isFull");
+//            boolean isAvailable = resJson.getBoolean("isAvailable");
+//            if (code == 200 && !isFull && isAvailable) {
+            if (code == 200) {
                 success = true;
+            }
+            else if (code == 503) {
+                dirConnector.markVolumeAsUnwritable(logicalVolume.logicalNum);
             }
         }
         return success;
     }
 
-    private static byte[] getPhotoData(PhotoIndexEntry entry) {
+    private byte[] getPhotoData(PhotoIndexEntry entry) {
         for (String physicalUrl : entry.physicalMachines) {
             HttpURLConnection con;
             try {
-                URL url = new URL(String.format("%s/%s/%d/%d",
-                        entry.cacheUrl, physicalUrl, entry.logicalId, entry.pid));
+                String urlString = String.format("http://%s/%s/%d/%d",
+                        entry.cacheUrl, physicalUrl, entry.logicalId, entry.pid);
+                System.out.println(urlString);
+                URL url = new URL(urlString);
                 con = (HttpURLConnection) url.openConnection();
             } catch (IOException e) {
                 System.err.println("Failed to connect to " + physicalUrl);
@@ -177,5 +224,36 @@ public class UploadHandler implements HttpHandler {
             }
         }
         return null;
+    }
+
+    private static boolean deletePhotoInStorage(long pid, String destinationHost, int logicalVolume) {
+        HttpURLConnection con;
+        try {
+            String urlString = String.format("http://%s/%d/%d",
+                    destinationHost, logicalVolume, pid);
+            System.out.println(urlString);
+            URL url = new URL(urlString);
+            con = (HttpURLConnection) url.openConnection();
+        } catch (IOException e) {
+            System.err.println("Failed to connect to " + destinationHost);
+            return false;
+        }
+
+        try {
+            con.setRequestMethod("DELETE");
+            con.setRequestProperty("Content-Type", "application/json");
+        } catch (ProtocolException e) {
+            e.printStackTrace();
+            return false;
+        }
+
+        int code;
+        try {
+            code = con.getResponseCode();
+        } catch (IOException e) {
+            e.printStackTrace();
+            return false;
+        }
+        return (code == 200);
     }
 }

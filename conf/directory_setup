@@ -2,17 +2,22 @@ CREATE KEYSPACE IF NOT EXISTS haystack
            WITH replication = {'class': 'SimpleStrategy', 'replication_factor' : 3};
 
 CREATE TABLE volumes (
-    lid varint primary key,
+    lid int primary key,
     physical_machine list<varchar>,
     writable boolean
 ) WITH caching = { 'keys' : 'ALL', 'rows_per_partition' : 'ALL' };
 
 CREATE TABLE photo_entries (
-	pid varint primary key,
+	pid bigint primary key,
 	cache_url varchar,
-	lid varint,
+	lid int,
 	physical_machine list<varchar>
 ) WITH caching = { 'keys' : 'ALL', 'rows_per_partition' : 'ALL' };
 
 INSERT INTO volumes (lid, physical_machine, writable) VALUES (1, ['127.0.0.1', '127.0.0.2'], true);
 INSERT INTO photo_entries (pid, cache_url, lid, physical_machine) VALUES (1111, '127.0.0.3', 1, ['127.0.0.1', '127.0.0.2']);
+INSERT INTO volumes (lid, physical_machine, writable) VALUES (2, ['128.2.13.145:4443'], true);
+
+UPDATE volumes SET writable = false WHERE lid = 1;
+
+DELETE FROM photo_entries WHRER pid = ;
