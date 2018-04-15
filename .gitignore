@@ -3,3 +3,8 @@
 *.class
 */target/*
 *.iml
+.DS_Store
+Haystack.iml
+target/
+.idea/
+
