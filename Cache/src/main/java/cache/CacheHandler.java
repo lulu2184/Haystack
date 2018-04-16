@@ -4,7 +4,9 @@ import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.StatusCodes;
 import org.apache.commons.io.IOUtils;
-import redis.clients.jedis.Jedis;
+import redis.clients.jedis.HostAndPort;
+//import redis.clients.jedis.Jedis;
+import redis.clients.jedis.JedisCluster;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -12,12 +14,37 @@ import java.io.RandomAccessFile;
 import java.net.HttpURLConnection;
 import java.net.ProtocolException;
 import java.net.URL;
+import java.util.HashSet;
+import java.util.Set;
 
 public class CacheHandler implements HttpHandler {
-    Jedis jedis = new Jedis();
+//    Jedis jedis = new Jedis();
+    private static Set<HostAndPort> nodes = initial();
+    JedisCluster cluster;
     boolean debug = false;
+
+    private static Set<HostAndPort> initial() {
+        Set<HostAndPort> nodes  = new HashSet<>();
+        nodes.add(new HostAndPort("128.2.100.165", 7000));
+        nodes.add(new HostAndPort("128.2.100.165", 7001));
+        nodes.add(new HostAndPort("128.2.100.165", 7002));
+        nodes.add(new HostAndPort("128.2.100.166", 7003));
+        nodes.add(new HostAndPort("128.2.100.166", 7004));
+        nodes.add(new HostAndPort("128.2.100.166", 7005));
+        nodes.add(new HostAndPort("128.2.100.167", 7006));
+        nodes.add(new HostAndPort("128.2.100.167", 7007));
+        nodes.add(new HostAndPort("128.2.100.167", 7008));
+        return nodes;
+    }
+
+    public CacheHandler() {
+        System.out.println(nodes.size());
+        cluster = new JedisCluster(nodes);
+    }
+
     @Override
     public void handleRequest(HttpServerExchange exchange) throws Exception {
+
         exchange.startBlocking();
         // into worker threads
         if (exchange.isInIoThread()) {
@@ -40,9 +67,9 @@ public class CacheHandler implements HttpHandler {
                 System.out.println("pid: " + key);
 
                 // TODO: about to change key
-                if (jedis.exists(key + "key")) {
+                if (cluster.exists(key + "key")) {
                     // return photo from cache
-                    byte[] photo = jedis.get((key + "key").getBytes());
+                    byte[] photo = cluster.get((key + "key").getBytes());
                     if (debug) {
                         writePhoto(filepath_root + "test" + key, photo);
                     }
@@ -100,8 +127,8 @@ public class CacheHandler implements HttpHandler {
 
     private void storePhotoIntoCache(String key, byte[] photo) {
         byte[] key_byte = (key + "key").getBytes();
-        jedis.set(key_byte, photo);
-        jedis.expire(key + "key", 60);
+        cluster.set(key_byte, photo);
+        cluster.expire(key + "key", 60);
     }
 
     private void writePhoto(String path, byte[] photo) {
