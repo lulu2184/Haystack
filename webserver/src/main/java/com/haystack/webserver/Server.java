@@ -21,7 +21,7 @@ public class Server
                     .delete("/servers/{type}", serverHandler);
 
             Undertow server = Undertow.builder()
-                    .addHttpListener(8080, "localhost")
+                    .addHttpListener(8080, "0.0.0.0")
                     .setHandler(routingHandler).build();
             server.start();
         } catch (Exception e) {
