@@ -18,7 +18,8 @@ You need 8 machines to deploy this distributed file system. To run our project, 
 2. Change `conf/cassandra.yaml` in Cassandra folder for the two Cassandra servers.
     * Change `listen_port` (on line 599) to the dns of the according machine.
     * Change `seeds` (on line 425) to the dns of the Cassandra seed.
-3. Use `bin/cqlsh` to create tables in Cassandra with following commands.
+3. Start Cassandra server with `bin/cassandra` on Cassandra seed and Cassandra replica nodes.
+4. Use `bin/cqlsh` to create tables in Cassandra with following commands.
 ```
 CREATE KEYSPACE IF NOT EXISTS haystack
            WITH replication = {'class': 'SimpleStrategy', 'replication_factor' : 3};
@@ -41,7 +42,7 @@ CREATE TABLE photo_entries (
 #### Web server
 1. Copy webserver java code to web server with command `scp -r webserver <web_server_dns>:<project_path>`
 2. Login to the web server machine and build the raw code with command `mvn package`
-3. Start the web server with `mvn exec:java`
+3. Start the web server with `mvn exec:java`. If you want the server run as daemon, you can start the service with `nohup mvn exec:java &`
 4. Install nginx and change the nginx.conf file. You can do this change based on the config file we give and you just need to modify the urls in `upstream directories`. Then run nginx with `nginx -p <YOUR_NGINX_HOME_PATH>` 
 #### Cache
 1. Copy cache java code to cache server with command `scp -r Cache <cache_server_dns>:<project_path>`
